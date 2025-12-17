@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { SettingsModal } from './components/SettingsModal.jsx';
-import { FaUser, FaCloudUploadAlt, FaChevronDown } from 'react-icons/fa';
+import { FaUser, FaCloudUploadAlt, FaChevronDown, FaFile, FaTimes } from 'react-icons/fa';
 import { FiMinimize2 } from "react-icons/fi";
 import { MdCancel } from "react-icons/md";
 import { MODELS } from './utils/constants';
@@ -11,6 +11,7 @@ export const App = () => {
   const [prompt, setPrompt] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
 
   useEffect(() => {
     const savedModel = localStorage.getItem('groq_model');
@@ -35,13 +36,72 @@ export const App = () => {
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragOver(false);
-    // TODO: Handle dropped files
-    console.log('Files dropped:', e.dataTransfer.files);
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      const file = files[0];
+      window.electronAPI.log('File dropped in app.jsx:', file.name, 'path property:', file.path);
+      try {
+        const filePath = window.electronAPI.getFilePath(file);
+        console.log('File dropped:', file.name);
+        console.log('File path:', filePath);
+        window.electronAPI.log('Final filePath:', filePath);
+
+        setSelectedFile({
+          name: file.name,
+          path: filePath,
+          extension: file.name.split('.').pop().toUpperCase()
+        });
+
+      } catch (e) {
+        window.electronAPI.log('Error calling getFilePath:', e.toString());
+      }
+    }
+  };
+
+  const fileInputRef = React.useRef(null);
+
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length > 0) {
+      const file = files[0];
+      window.electronAPI.log('File selected via click:', file.name);
+      try {
+        const filePath = window.electronAPI.getFilePath(file);
+        console.log('File selected:', file.name);
+        console.log('File path:', filePath);
+        window.electronAPI.log('Final filePath:', filePath);
+
+        setSelectedFile({
+          name: file.name,
+          path: filePath,
+          extension: file.name.split('.').pop().toUpperCase()
+        });
+
+      } catch (e) {
+        window.electronAPI.log('Error calling getFilePath:', e.toString());
+      }
+    }
+  };
+
+  const handleRemoveFile = (e) => {
+    e.stopPropagation(); // Prevent click from triggering input
+    setSelectedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   return (
     // Outer Wrapper - defines the window shape and holds the border logic
     <div className="relative h-screen w-screen rounded-[12px] overflow-hidden bg-transparent">
+
+      {/* Hidden File Input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileSelect}
+        className="hidden"
+        style={{ display: 'none' }}
+      />
 
       {/* Corner Glows */}
       {/* Top Left - Pinkish */}
@@ -188,19 +248,48 @@ export const App = () => {
 
             {/* Actual Drop Zone Content - Black Background */}
             <div
-              className={`relative h-full w-full rounded-3xl flex flex-col items-center justify-center transition-all duration-300 backdrop-blur-md z-10 ${isDragOver
+              className={`relative h-full w-full rounded-3xl flex flex-col items-center justify-center transition-all duration-300 backdrop-blur-md z-10 cursor-pointer ${isDragOver
                 ? 'bg-black scale-[0.99] border hover:border-[rgba(255,255,255,0.1)]'
                 : 'bg-black border border-[rgba(255,255,255,0.1)]'
                 }`}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
+              onClick={() => !selectedFile && fileInputRef.current.click()}
             >
-              <div className={`p-4 rounded-full mb-3 transition-colors ${isDragOver ? 'bg-[rgba(34,211,238,0.2)]' : 'bg-[rgba(255,255,255,0.05)]'}`}>
-                <FaCloudUploadAlt size={24} className={isDragOver ? 'text-cyan-400' : 'text-neutral-400'} />
-              </div>
-              <p className="text-neutral-300 font-medium">Drop image, video or audio files</p>
-              <p className="text-neutral-500 text-xs mt-1">Supports MP4, AVI, MP3, WAV, JPG, PNG</p>
+              {selectedFile ? (
+                <div className="flex flex-col items-center justify-center relative w-full h-full">
+                  {/* Cancel Button */}
+                  <button
+                    onClick={handleRemoveFile}
+                    className="absolute top-2 right-2 p-1.5 rounded-full bg-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.2)] text-neutral-400 hover:text-red-400 transition-colors z-20"
+                    title="Remove file"
+                  >
+                    <FaTimes size={12} />
+                  </button>
+
+                  {/* File Icon with Extension */}
+                  <div className="relative mb-3">
+                    <FaFile size={48} className="text-neutral-600" />
+                    <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-black pt-1.5 select-none">
+                      {selectedFile.extension.slice(0, 4)}
+                    </span>
+                  </div>
+
+                  <p className="text-white font-medium text-sm max-w-[90%] truncate px-4" title={selectedFile.name}>
+                    {selectedFile.name}
+                  </p>
+                  <p className="text-neutral-500 text-xs mt-1">Ready to process</p>
+                </div>
+              ) : (
+                <>
+                  <div className={`p-4 rounded-full mb-3 transition-colors ${isDragOver ? 'bg-[rgba(34,211,238,0.2)]' : 'bg-[rgba(255,255,255,0.05)]'}`}>
+                    <FaCloudUploadAlt size={24} className={isDragOver ? 'text-cyan-400' : 'text-neutral-400'} />
+                  </div>
+                  <p className="text-neutral-300 font-medium">Drop image, video or audio files</p>
+                  <p className="text-neutral-500 text-xs mt-1">Supports MP4, AVI, MP3, WAV, JPG, PNG</p>
+                </>
+              )}
             </div>
           </div>
 

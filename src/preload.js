@@ -1,6 +1,6 @@
 // See the Electron documentation for details on how to use preload scripts:
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   executeFFmpeg: (exe, args) => ipcRenderer.invoke('ffmpeg:execute', { exe, args }),
@@ -13,4 +13,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   clearApiKey: () => ipcRenderer.invoke('auth:clearKey'),
 
   send: (channel, ...args) => ipcRenderer.send(channel, ...args),
+  log: (...args) => ipcRenderer.send('console-log', ...args),
+  getFilePath: (file) => {
+    try {
+      const path = webUtils.getPathForFile(file);
+      ipcRenderer.send('console-log', 'webUtils.getPathForFile result:', path);
+      return path;
+    } catch (e) {
+      ipcRenderer.send('console-log', 'Error in getFilePath:', e.message);
+      return file.path; // Fallback
+    }
+  },
 });

@@ -111,6 +111,10 @@ ipcMain.handle('ffmpeg:execute', async (_, { exe, args }) => {
   }
 });
 
+ipcMain.on('console-log', (event, ...args) => {
+  console.log('Renderer Log:', ...args);
+});
+
 // Window control handlers
 ipcMain.handle('window:minimize', () => {
   const win = BrowserWindow.getFocusedWindow();
