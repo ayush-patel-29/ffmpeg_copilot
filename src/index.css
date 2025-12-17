@@ -1,8 +1,18 @@
+@import "tailwindcss";
+
 * {
   margin: 0%;
   padding: 0%;
+  box-sizing: border-box;
 }
 
+html,
+body {
+  background-color: transparent;
+  height: 100%;
+  overflow: hidden;
+  /* Prevent scrollbars on the body itself */
+}
 
 body {
   font-family:
@@ -10,7 +20,49 @@ body {
     sans-serif;
 }
 
-#root{
+#root {
   height: 100%;
   width: 100%;
+}
+
+@property --gradient-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes gradient-rotate {
+  0% {
+    --gradient-angle: 0deg;
+  }
+
+  100% {
+    --gradient-angle: 360deg;
+  }
+}
+
+.animate-gradient-border {
+  animation: gradient-rotate 4s linear infinite;
+}
+
+@font-face {
+  font-family: 'Polea Extra Bold';
+  src: url('./fonts/Polea Extra Bold DEMO.otf') format('opentype');
+  font-weight: bold;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Amsterdam Handwriting';
+  src: url('./fonts/Amsterdam Handwriting.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+.font-amsterdam {
+  font-family: 'Amsterdam Handwriting', cursive;
+}
+
+.font-polea {
+  font-family: 'Polea Extra Bold', sans-serif;
 }

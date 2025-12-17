@@ -16,21 +16,29 @@ if (require('electron-squirrel-startup')) {
 const createWindow = () => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 600,
+    width: 550,
     height: 700,
     resizable: false,     // fixed size
     maximizable: false,   // removes maximize ability
     minimizable: true,    // keeps minimize
     closable: true,       // keeps close button
-    frame: true,
+    frame: false,         // Remove frame for custom design
+    transparent: true,    // Enable transparency
+    backgroundColor: '#00000000', // Fully transparent background
+    // hasShadow: false, // Optional: might want to remove system shadow if it looks weird with glass
     webPreferences: {
-      nodeIntegration: true
+      preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
+      contextIsolation: true,
+      nodeIntegration: false
     }
   });
 
   Menu.setApplicationMenu(null);
   // and load the index.html of the app.
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
+
+  // Open DevTools to see errors
+  mainWindow.webContents.openDevTools();
 
 };
 
@@ -101,4 +109,15 @@ ipcMain.handle('ffmpeg:execute', async (_, { exe, args }) => {
   } catch (err) {
     return err;
   }
+});
+
+// Window control handlers
+ipcMain.handle('window:minimize', () => {
+  const win = BrowserWindow.getFocusedWindow();
+  if (win) win.minimize();
+});
+
+ipcMain.handle('window:close', () => {
+  const win = BrowserWindow.getFocusedWindow();
+  if (win) win.close();
 });
