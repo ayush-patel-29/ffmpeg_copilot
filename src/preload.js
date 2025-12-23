@@ -4,6 +4,9 @@ const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   executeFFmpeg: (exe, args) => ipcRenderer.invoke('ffmpeg:execute', { exe, args }),
+  groqGenerate: (params) => ipcRenderer.invoke('groq:generate', params),
+  onFFmpegLog: (callback) => ipcRenderer.on('ffmpeg-log', (event, value) => callback(value)),
+  offFFmpegLog: () => ipcRenderer.removeAllListeners('ffmpeg-log'),
   minimizeWindow: () => ipcRenderer.invoke('window:minimize'),
   closeWindow: () => ipcRenderer.invoke('window:close'),
 
@@ -11,6 +14,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setApiKey: (key) => ipcRenderer.invoke('auth:setKey', key),
   getApiKey: () => ipcRenderer.invoke('auth:getKey'),
   clearApiKey: () => ipcRenderer.invoke('auth:clearKey'),
+
+  // File operations
+  showInFolder: (filePath) => ipcRenderer.invoke('file:showInFolder', filePath),
 
   send: (channel, ...args) => ipcRenderer.send(channel, ...args),
   log: (...args) => ipcRenderer.send('console-log', ...args),

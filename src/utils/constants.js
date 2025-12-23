@@ -2,7 +2,7 @@ const OUTPUT_DIR = "C:/ffmpeg_copilot/outputs/";
 
 const MODELS = {
     free: [
-        { id: 'llama3-8b-8192', name: 'Llama 3 8B (Free)' },
+        { id: 'llama-3.3-70b-versatile', name: 'Llama 3 70B (Free)' },
     ],
     paid: [
         { id: 'llama3-70b-8192', name: 'Llama 3 70B (High Performance)' },

@@ -1,4 +1,5 @@
 const Groq = require("groq-sdk");
+const fs = require("fs");
 const { OUTPUT_DIR } = require("../utils/constants.js");
 const { getApiKey } = require("../auth");
 
@@ -24,11 +25,15 @@ const generateFFmpegCommand = async ({ prompt, model, file }) => {
         Return only valid JSON — no explanations, no text outside the JSON.
     `.trim();
 
+    if (!fs.existsSync(OUTPUT_DIR)) {
+        fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+    }
+
     const filename = OUTPUT_DIR + file.split("\\").pop().split("/").pop().split(".")[0] + Date.now();
     const userPrompt = `
         User request: "${prompt}"
         Input file src: "${file}" 
-        Output filename placeholder: "${filename}"
+        Output filename placeholder: "${filename}" #override filename if user explicitly requests it in the prompt
     `.trim();
 
     try {
@@ -62,7 +67,7 @@ const generateFFmpegCommand = async ({ prompt, model, file }) => {
         }
 
         // optionally validate json shape here
-        return { ok: true, data: json };
+        return { ok: true, data: json, outputFilename: filename };
 
     } catch (err) {
         // Groq SDK throws an error on API failure (e.g., 4xx or 5xx)

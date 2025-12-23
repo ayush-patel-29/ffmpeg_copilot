@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, shell } = require('electron');
 const path = require('node:path');
 const { setApiKey, getApiKey, clearApiKey } = require("./auth");
 const { executeFFmpeg } = require("./ffmpegExecutor");
@@ -102,9 +102,12 @@ ipcMain.handle('groq:generate', async (_, { prompt, model, file }) => {
   return await generateFFmpegCommand({ prompt, model, file });
 });
 
-ipcMain.handle('ffmpeg:execute', async (_, { exe, args }) => {
+ipcMain.handle('ffmpeg:execute', async (event, { exe, args }) => {
   try {
-    const result = await executeFFmpeg({ exe, args });
+    const onLog = (msg) => {
+      event.sender.send('ffmpeg-log', msg);
+    };
+    const result = await executeFFmpeg({ exe, args, onLog });
     return result;
   } catch (err) {
     return err;
@@ -124,4 +127,19 @@ ipcMain.handle('window:minimize', () => {
 ipcMain.handle('window:close', () => {
   const win = BrowserWindow.getFocusedWindow();
   if (win) win.close();
+});
+
+// Open file folder
+ipcMain.handle('file:showInFolder', async (event, filePath) => {
+  try {
+    shell.showItemInFolder(filePath);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+// Open external URL in default browser
+ipcMain.on('open-external-url', (event, url) => {
+  shell.openExternal(url);
 });
