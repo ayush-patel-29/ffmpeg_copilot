@@ -17,6 +17,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // File operations
   showInFolder: (filePath) => ipcRenderer.invoke('file:showInFolder', filePath),
+  listOutputs: () => ipcRenderer.invoke('file:listOutputs'),
+  readAsDataURL: (filePath) => ipcRenderer.invoke('file:readAsDataURL', filePath),
 
   send: (channel, ...args) => ipcRenderer.send(channel, ...args),
   log: (...args) => ipcRenderer.send('console-log', ...args),

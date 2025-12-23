@@ -1,9 +1,85 @@
 const { app, BrowserWindow, ipcMain, Menu, shell } = require('electron');
 const path = require('node:path');
+const fs = require('fs');
 const { setApiKey, getApiKey, clearApiKey } = require("./auth");
 const { executeFFmpeg } = require("./ffmpegExecutor");
 const { generateFFmpegCommand } = require("./services/groqClient");
 const { error } = require('node:console');
+const { OUTPUT_DIR } = require('./utils/constants');
+
+// ... (existing code) ...
+
+// Open external URL in default browser
+ipcMain.on('open-external-url', (event, url) => {
+  shell.openExternal(url);
+});
+
+// List output files
+ipcMain.handle('file:listOutputs', async () => {
+  try {
+    if (!fs.existsSync(OUTPUT_DIR)) {
+      return { ok: true, files: [] };
+    }
+
+    const files = await fs.promises.readdir(OUTPUT_DIR);
+    const fileStats = await Promise.all(
+      files.map(async (file) => {
+        const filePath = path.join(OUTPUT_DIR, file);
+        try {
+          const stats = await fs.promises.stat(filePath);
+          const ext = path.extname(file).toLowerCase();
+
+          let type = 'other';
+          if (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp'].includes(ext)) type = 'image';
+          else if (['.mp4', '.mkv', '.avi', '.mov', '.webm', '.flv'].includes(ext)) type = 'video';
+          else if (['.mp3', '.wav', '.aac', '.flac', '.m4a', '.ogg'].includes(ext)) type = 'audio';
+
+          return {
+            name: file,
+            path: filePath,
+            type,
+            createdAt: stats.birthtime,
+            size: stats.size
+          };
+        } catch (e) {
+          return null;
+        }
+      })
+    );
+
+    // Filter out nulls and sort by createdAt descending
+    const sortedFiles = fileStats
+      .filter(f => f !== null)
+      .sort((a, b) => b.createdAt - a.createdAt);
+
+    return { ok: true, files: sortedFiles };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+// Read file as base64 data URL for preview
+ipcMain.handle('file:readAsDataURL', async (event, filePath) => {
+  try {
+    const buffer = await fs.promises.readFile(filePath);
+    const ext = path.extname(filePath).toLowerCase();
+
+    let mimeType = 'application/octet-stream';
+    if (['.jpg', '.jpeg'].includes(ext)) mimeType = 'image/jpeg';
+    else if (ext === '.png') mimeType = 'image/png';
+    else if (ext === '.gif') mimeType = 'image/gif';
+    else if (ext === '.webp') mimeType = 'image/webp';
+    else if (ext === '.svg') mimeType = 'image/svg+xml';
+    else if (ext === '.mp4') mimeType = 'video/mp4';
+    else if (ext === '.webm') mimeType = 'video/webm';
+
+    const base64 = buffer.toString('base64');
+    return { ok: true, dataURL: `data:${mimeType};base64,${base64}` };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
 
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -98,8 +174,8 @@ ipcMain.handle('auth:clearKey', async () => {
   }
 });
 
-ipcMain.handle('groq:generate', async (_, { prompt, model, file }) => {
-  return await generateFFmpegCommand({ prompt, model, file });
+ipcMain.handle('groq:generate', async (_, { prompt, model, files }) => {
+  return await generateFFmpegCommand({ prompt, model, files });
 });
 
 ipcMain.handle('ffmpeg:execute', async (event, { exe, args }) => {

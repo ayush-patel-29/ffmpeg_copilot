@@ -3,7 +3,7 @@ const fs = require("fs");
 const { OUTPUT_DIR } = require("../utils/constants.js");
 const { getApiKey } = require("../auth");
 
-const generateFFmpegCommand = async ({ prompt, model, file }) => {
+const generateFFmpegCommand = async ({ prompt, model, files }) => {
     // main retrieves API key from keytar (never sends it to renderer)
     const apiKey = await getApiKey();
     if (!apiKey) return { ok: false, error: 'API key not set' };
@@ -29,11 +29,34 @@ const generateFFmpegCommand = async ({ prompt, model, file }) => {
         fs.mkdirSync(OUTPUT_DIR, { recursive: true });
     }
 
-    const filename = OUTPUT_DIR + file.split("\\").pop().split("/").pop().split(".")[0] + Date.now();
+    // Handle multiple files - validate input
+    if (!files) {
+        return { ok: false, error: 'No files provided' };
+    }
+
+    const filesList = Array.isArray(files) ? files : [files];
+
+    // Validate each file path
+    if (filesList.length === 0 || filesList.some(f => !f || typeof f !== 'string')) {
+        return { ok: false, error: 'Invalid file paths provided' };
+    }
+
+    const inputFilesInfo = filesList.map((file, index) => {
+        const basename = file.split("\\").pop().split("/").pop().split(".")[0];
+        const outputFilename = OUTPUT_DIR + basename + "_" + Date.now() + (index > 0 ? `_${index}` : '');
+        return {
+            input: file,
+            outputPlaceholder: outputFilename
+        };
+    });
+
     const userPrompt = `
         User request: "${prompt}"
-        Input file src: "${file}" 
-        Output filename placeholder: "${filename}" #override filename if user explicitly requests it in the prompt
+        ${inputFilesInfo.length === 1
+            ? `Input file: "${inputFilesInfo[0].input}"\nOutput filename placeholder: "${inputFilesInfo[0].outputPlaceholder}"`
+            : `Input files:\n${inputFilesInfo.map((f, i) => `  ${i + 1}. "${f.input}" -> Output placeholder: "${f.outputPlaceholder}"`).join('\n')}`
+        }
+        #override filename if user explicitly requests it in the prompt
     `.trim();
 
     try {
@@ -67,7 +90,7 @@ const generateFFmpegCommand = async ({ prompt, model, file }) => {
         }
 
         // optionally validate json shape here
-        return { ok: true, data: json, outputFilename: filename };
+        return { ok: true, data: json, outputFilename: inputFilesInfo[0].outputPlaceholder };
 
     } catch (err) {
         // Groq SDK throws an error on API failure (e.g., 4xx or 5xx)

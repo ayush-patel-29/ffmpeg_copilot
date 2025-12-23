@@ -4,15 +4,18 @@ import { FaUser, FaCloudUploadAlt, FaChevronDown, FaFile, FaTimes } from 'react-
 import { FiMinimize2 } from "react-icons/fi";
 import { MdCancel } from "react-icons/md";
 import { RxDividerVertical } from "react-icons/rx";
+import { RiMenu4Fill } from "react-icons/ri";
 import { MODELS } from './utils/constants';
+import { GalleryModal } from './components/GalleryModal.jsx';
 
 export const App = () => {
   const [showSettings, setShowSettings] = useState(false);
+  const [showGallery, setShowGallery] = useState(false);
   const [selectedModel, setSelectedModel] = useState(MODELS.free[0].id);
   const [prompt, setPrompt] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const [processingStatus, setProcessingStatus] = useState('idle'); // 'idle' | 'executing' | 'completed'
   const [terminalLogs, setTerminalLogs] = useState([]);
   const [outputFile, setOutputFile] = useState(null);
@@ -54,28 +57,26 @@ export const App = () => {
 
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
-      const file = files[0];
-      window.electronAPI.log('File dropped in app.jsx:', file.name, 'path property:', file.path);
-      try {
-        const filePath = window.electronAPI.getFilePath(file);
-        console.log('File dropped:', file.name);
-        console.log('File path:', filePath);
-        window.electronAPI.log('Final filePath:', filePath);
+      const processedFiles = files.map(file => {
+        try {
+          const filePath = window.electronAPI.getFilePath(file);
+          return {
+            name: file.name,
+            path: filePath,
+            extension: file.name.split('.').pop().toUpperCase()
+          };
+        } catch (e) {
+          window.electronAPI.log('Error processing file:', file.name, e.toString());
+          return null;
+        }
+      }).filter(f => f !== null);
 
-        setSelectedFile({
-          name: file.name,
-          path: filePath,
-          extension: file.name.split('.').pop().toUpperCase()
-        });
-
-      } catch (e) {
-        window.electronAPI.log('Error calling getFilePath:', e.toString());
-      }
+      setSelectedFiles(processedFiles);
     }
   };
 
   const handleExecution = async () => {
-    if (!selectedFile || !prompt.trim()) return;
+    if (selectedFiles.length === 0 || !prompt.trim()) return;
 
     // Check if API key is set
     const apiKeyCheck = await window.electronAPI.getApiKey();
@@ -100,7 +101,7 @@ export const App = () => {
       const genResult = await window.electronAPI.groqGenerate({
         prompt,
         model: selectedModel,
-        file: selectedFile.path
+        files: selectedFiles.map(f => f.path)
       });
 
       if (!genResult.ok) {
@@ -155,30 +156,30 @@ export const App = () => {
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files);
     if (files.length > 0) {
-      const file = files[0];
-      window.electronAPI.log('File selected via click:', file.name);
-      try {
-        const filePath = window.electronAPI.getFilePath(file);
-        console.log('File selected:', file.name);
-        console.log('File path:', filePath);
-        window.electronAPI.log('Final filePath:', filePath);
+      const processedFiles = files.map(file => {
+        try {
+          const filePath = window.electronAPI.getFilePath(file);
+          return {
+            name: file.name,
+            path: filePath,
+            extension: file.name.split('.').pop().toUpperCase()
+          };
+        } catch (e) {
+          window.electronAPI.log('Error processing file:', file.name, e.toString());
+          return null;
+        }
+      }).filter(f => f !== null);
 
-        setSelectedFile({
-          name: file.name,
-          path: filePath,
-          extension: file.name.split('.').pop().toUpperCase()
-        });
-
-      } catch (e) {
-        window.electronAPI.log('Error calling getFilePath:', e.toString());
-      }
+      setSelectedFiles(processedFiles);
     }
   };
 
-  const handleRemoveFile = (e) => {
-    e.stopPropagation(); // Prevent click from triggering input
-    setSelectedFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+  const handleRemoveFile = (index, e) => {
+    e.stopPropagation();
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    if (selectedFiles.length === 1 && fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   return (
@@ -192,6 +193,7 @@ export const App = () => {
         onChange={handleFileSelect}
         className="hidden"
         style={{ display: 'none' }}
+        multiple
       />
 
       {/* Corner Glows */}
@@ -246,12 +248,55 @@ export const App = () => {
           paddingLeft: '10px',
           cursor: 'default',
           paddingRight: '10px',
-          justifyContent: "flex-end",
+          justifyContent: "space-between",
           position: 'relative',
           // border: '1px solid rgba(255,255,255,0.2)',
         }}>
-
-          <span className="absolute w-full h-full top-0 left-0 flex items-center justify-center">
+          {/* Menu Button */}
+          <div
+            className="animate-shadow-pulse"
+            style={{
+              WebkitAppRegion: 'no-drag',
+              display: 'flex',
+              alignItems: 'center',
+              background: 'rgba(0,0,0,0.5)',
+              backdropFilter: 'blur(16px)',
+              borderRadius: '14px',
+              padding: '5px',
+              border: '1px solid rgba(255,255,255,0.1)',
+              boxShadow: '0 4px 20px rgba(236,72,153,0.25), 0 0 40px rgba(236,72,153,0.15), inset 0 1px 0 rgba(255,255,255,0.08)',
+              position: 'relative',
+              zIndex: 10
+            }}
+          >
+            <button
+              onClick={() => setShowGallery(true)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '7px 11px',
+                borderRadius: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s',
+                color: 'rgb(163, 163, 163)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                e.currentTarget.style.color = 'white';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.color = 'rgb(163, 163, 163)';
+              }}
+              title="Output Gallery"
+            >
+              <RiMenu4Fill size={18} />
+            </button>
+          </div>
+          <span className="absolute w-full h-full top-0 left-0 flex items-center justify-center" style={{ pointerEvents: 'none' }}>
             <span className="text-white rounded-full backdrop-blur-2xl bg-[rgba(255,255,255,0.3)] text-xl px-3 py-1">FFmpeg Copilot</span>
           </span>
 
@@ -408,7 +453,7 @@ export const App = () => {
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              onClick={() => processingStatus === 'idle' && !selectedFile && fileInputRef.current.click()}
+              onClick={() => processingStatus === 'idle' && selectedFiles.length === 0 && fileInputRef.current.click()}
             >
               {processingStatus === 'executing' ? (
                 // Terminal View
@@ -457,29 +502,36 @@ export const App = () => {
                     Process Completed Successfully
                   </div>
                 </div>
-              ) : selectedFile ? (
-                <div className="flex flex-col items-center justify-center relative w-full h-full animate-zoom-in">
-                  {/* Cancel Button */}
-                  <button
-                    onClick={handleRemoveFile}
-                    className="absolute top-2 right-2 p-1.5 rounded-full bg-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.2)] text-neutral-400 hover:text-red-400 transition-colors z-20"
-                    title="Remove file"
-                  >
-                    <FaTimes size={12} />
-                  </button>
+              ) : selectedFiles.length > 0 ? (
+                <div className="flex flex-col items-center justify-center relative w-full h-full animate-zoom-in overflow-y-auto p-4">
+                  {/* File Grid */}
+                  <div className="grid grid-cols-2 gap-3 w-full max-h-full overflow-y-auto">
+                    {selectedFiles.map((file, index) => (
+                      <div key={index} className="relative flex flex-col items-center justify-center p-3 bg-[rgba(255,255,255,0.05)] rounded-xl border border-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.08)] transition-colors">
+                        {/* Remove Button */}
+                        <button
+                          onClick={(e) => handleRemoveFile(index, e)}
+                          className="absolute top-1 right-1 p-1 rounded-full bg-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.2)] text-neutral-400 hover:text-red-400 transition-colors z-20"
+                          title="Remove file"
+                        >
+                          <FaTimes size={10} />
+                        </button>
 
-                  {/* File Icon with Extension */}
-                  <div className="relative mb-3">
-                    <FaFile size={48} className="text-neutral-600" />
-                    <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-black pt-1.5 select-none">
-                      {selectedFile.extension.slice(0, 4)}
-                    </span>
+                        {/* File Icon */}
+                        <div className="relative mb-2">
+                          <FaFile size={32} className="text-neutral-600" />
+                          <span className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-black pt-1 select-none">
+                            {file.extension.slice(0, 4)}
+                          </span>
+                        </div>
+
+                        <p className="text-white font-medium text-xs max-w-full truncate px-2 text-center" title={file.name}>
+                          {file.name}
+                        </p>
+                      </div>
+                    ))}
                   </div>
-
-                  <p className="text-white font-medium text-sm max-w-[90%] truncate px-4" title={selectedFile.name}>
-                    {selectedFile.name}
-                  </p>
-                  <p className="text-neutral-500 text-xs mt-1">Ready to process</p>
+                  <p className="text-neutral-500 text-xs mt-3">{selectedFiles.length} file{selectedFiles.length > 1 ? 's' : ''} ready</p>
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center">
@@ -927,6 +979,7 @@ export const App = () => {
 
         {/* Modals */}
         {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+        {showGallery && <GalleryModal onClose={() => setShowGallery(false)} />}
       </div>
     </div >
   );
