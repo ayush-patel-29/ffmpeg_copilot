@@ -7,6 +7,7 @@ import { RxDividerVertical } from "react-icons/rx";
 import { RiMenu4Fill } from "react-icons/ri";
 import { MODELS } from './utils/constants';
 import { GalleryModal } from './components/GalleryModal.jsx';
+import { GridWarpEffect } from './components/GridWarpEffect.jsx';
 
 export const App = () => {
   const [showSettings, setShowSettings] = useState(false);
@@ -226,19 +227,31 @@ export const App = () => {
           backgroundSize: '40px 40px'
         }}
       >
-        {/* Grid Highlight Overlay */}
-        <div
-          className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-          style={{
-            backgroundImage: `
-              linear-gradient(to right, rgba(255, 255, 255, 0.5) 1px, transparent 1px),
-              linear-gradient(to bottom, rgba(255, 255, 255, 0.5) 1px, transparent 1px)
-            `,
-            backgroundSize: '40px 40px',
-            maskImage: `radial-gradient(200px circle at var(--mouse-x) var(--mouse-y), black, transparent)`,
-            WebkitMaskImage: `radial-gradient(200px circle at var(--mouse-x) var(--mouse-y), black, transparent)`,
-          }}
-        />
+        {/* Canvas-based Grid Warp Effect - Actually bends lines */}
+        <GridWarpEffect />
+
+        {/* SVG Filter for Space-Time Curve Effect */}
+        <svg width="0" height="0" style={{ position: 'absolute' }}>
+          <defs>
+            <filter id="spacetime-warp">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="0" result="blur" />
+              <feDisplacementMap
+                in="SourceGraphic"
+                in2="turbulence"
+                scale="25"
+                xChannelSelector="R"
+                yChannelSelector="G"
+              />
+              <feTurbulence
+                id="turbulence"
+                type="fractalNoise"
+                baseFrequency="0.02"
+                numOctaves="2"
+                result="turbulence"
+              />
+            </filter>
+          </defs>
+        </svg>
         {/* Custom Title Bar / Drag Region */}
         <div style={{
           height: '60px',
@@ -413,7 +426,7 @@ export const App = () => {
 
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col items-center justify-center  w-full max-w-3xl mx-auto z-10" style={{ WebkitAppRegion: 'no-drag' }}>
+        <div className="flex-1 flex flex-col items-center justify-center  w-full max-w-3xl mx-auto z-10 " style={{ WebkitAppRegion: 'no-drag' }}>
 
           {/* Header Text */}
           <h1 className="text-5xl text-white select-none font-amsterdam">
