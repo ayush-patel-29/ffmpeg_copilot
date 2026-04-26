@@ -9,7 +9,10 @@ module.exports = {
   makers: [
     {
       name: '@electron-forge/maker-squirrel',
-      config: {},
+      config: {
+        name: 'FFmpegCopilot',
+        setupExe: 'FFmpegCopilot-Setup.exe',
+      },
     },
     {
       name: '@electron-forge/maker-zip',

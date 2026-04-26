@@ -8,6 +8,7 @@ import { RiMenu4Fill } from "react-icons/ri";
 import { MODELS } from './utils/constants';
 import { GalleryModal } from './components/GalleryModal.jsx';
 import { GridWarpEffect } from './components/GridWarpEffect.jsx';
+import FFmpegLogo from './assets/FFmpegCopilotLogo3.png';
 
 export const App = () => {
   const [showSettings, setShowSettings] = useState(false);
@@ -263,6 +264,7 @@ export const App = () => {
           paddingRight: '10px',
           justifyContent: "space-between",
           position: 'relative',
+          zIndex: 10, // Above canvas grid
           // border: '1px solid rgba(255,255,255,0.2)',
         }}>
           {/* Menu Button */}
@@ -309,9 +311,8 @@ export const App = () => {
               <RiMenu4Fill size={18} />
             </button>
           </div>
-          <span className="absolute w-full h-full top-0 left-0 flex items-center justify-center" style={{ pointerEvents: 'none' }}>
-            <span className="text-white rounded-full backdrop-blur-2xl bg-[rgba(255,255,255,0.3)] text-xl px-3 py-1">FFmpeg Copilot</span>
-          </span>
+
+
 
 
 
@@ -321,8 +322,8 @@ export const App = () => {
               display: 'flex',
               alignItems: 'center',
               gap: '0px',
-              background: 'rgba(0,0,0,0.5)',
-              backdropFilter: 'blur(16px)',
+              background: 'black',
+              // backdropFilter: 'blur(50px)',
               borderRadius: '14px',
               padding: '5px',
               border: '1px solid rgba(255,255,255,0.1)',
@@ -424,9 +425,13 @@ export const App = () => {
           </div>
         </div>
 
+        {/* Centered Logo */}
+        <div style={{ position: 'absolute', top: '0px', left: 0, right: 0, display: 'flex', justifyContent: 'center', pointerEvents: 'none', zIndex: 9 }}>
+          <img src={FFmpegLogo} alt="FFmpeg Copilot" style={{ height: '200px', objectFit: 'contain' }} />
+        </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col items-center justify-center  w-full max-w-3xl mx-auto z-10 " style={{ WebkitAppRegion: 'no-drag' }}>
+        <div className="flex-1 flex flex-col items-center justify-center  w-full max-w-3xl mx-auto z-10 " style={{ WebkitAppRegion: 'no-drag', paddingTop: '60px' }}>
 
           {/* Header Text */}
           <h1 className="text-5xl text-white select-none font-amsterdam">

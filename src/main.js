@@ -93,7 +93,7 @@ const createWindow = () => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 550,
-    height: 700,
+    height: 760,
     resizable: false,     // fixed size
     maximizable: false,   // removes maximize ability
     minimizable: true,    // keeps minimize
@@ -113,8 +113,7 @@ const createWindow = () => {
   // and load the index.html of the app.
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
 
-  // Open DevTools to see errors
-  mainWindow.webContents.openDevTools();
+
 
 };
 
